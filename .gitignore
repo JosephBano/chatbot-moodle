@@ -1,0 +1,31 @@
+# ── IDE & Editor ───────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ── Python & Environments ───────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+ENV/
+.env
+.pytest_cache/
+
+# ── Docker & Local Data ─────────────────────────────────
+chroma_db/
+postgres_data/
+
+# ── Node (if any) ──────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Logs & Artefacts ────────────────────────────────────
+*.log
+logs/
+.coverage
+htmlcov/
