@@ -1,0 +1,43 @@
+services:
+
+  moodle_db:
+    image: mariadb:10.6
+    container_name: moodle_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_USER: moodle_user
+      MYSQL_PASSWORD: moodle_pass
+      MYSQL_DATABASE: moodle_db
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - moodle_db_data:/var/lib/mysql
+    networks:
+      - moodle_net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  moodle:
+    build: .
+    container_name: moodle
+    depends_on:
+      moodle_db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    volumes:
+      - moodle_data:/var/moodledata
+    networks:
+      - moodle_net
+
+volumes:
+  moodle_db_data:
+  moodle_data:
+
+networks:
+  moodle_net:
+    driver: bridge

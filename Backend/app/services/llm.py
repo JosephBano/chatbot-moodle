@@ -23,14 +23,20 @@ REGLAS ESTRICTAS DE COMPORTAMIENTO:
 Rol del usuario: {user_role}
 Página actual en Moodle: {context}
 
-Material relevante del curso:
+Fragmentos relevantes del curso (obtenidos por búsqueda semántica):
 {rag_context}
 """
 
-async def generate_response(message: str, history: list, user_role: str, context: str) -> str:
-    # Buscar contexto en la base de conocimiento
-    rag_docs = search_knowledge_base(message)
-    rag_context = "\n".join(rag_docs) if rag_docs else "No se encontró material específico del curso."
+async def generate_response(
+    message: str,
+    history: list,
+    user_role: str,
+    context: str,
+    course_id: int = None
+) -> str:
+    # Búsqueda semántica filtrada por curso
+    rag_docs = search_knowledge_base(message, course_id=course_id)
+    rag_context = "\n---\n".join(rag_docs) if rag_docs else "No se encontró material indexado para este curso."
 
     system = SYSTEM_PROMPT.format(
         user_role=user_role,
