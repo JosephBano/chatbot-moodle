@@ -281,7 +281,77 @@ Un curso puede estar habilitado pero no indexado (el chatbot responde sin contex
 
 ---
 
-## PARTE 6 — Notas para producción
+## PARTE 6 — Auto-indexación periódica (Fase 2)
+
+El backend re-indexa automáticamente todos los cursos en `ALLOWED_COURSE_IDS` en segundo plano, sin intervención manual.
+
+### 6.1 Configurar el intervalo
+
+Agregar al `.env`:
+
+```env
+# Intervalo de re-indexación en horas (0 = desactivado)
+INDEX_INTERVAL_HOURS=6
+```
+
+Después de modificar el `.env`, reconstruir:
+
+```bash
+docker compose up -d --build
+```
+
+### 6.2 Comportamiento
+
+- Al arrancar el backend, espera **60 segundos** antes del primer ciclo (para no bloquear el startup)
+- Luego re-indexa todos los cursos de `ALLOWED_COURSE_IDS` en orden
+- Repite cada `INDEX_INTERVAL_HOURS` horas indefinidamente
+- Si `MOODLE_URL`, `MOODLE_API_TOKEN` o `ALLOWED_COURSE_IDS` no están configurados, el ciclo se omite sin error
+
+### 6.3 Verificar que está activo
+
+```bash
+docker compose logs backend | grep -i "auto-index"
+```
+
+Salida esperada al arrancar:
+```
+Auto-indexación activada cada 6 horas.
+```
+
+Y cada ciclo:
+```
+Auto-indexación iniciada para cursos: [531, 630]
+Curso 531 indexado: {'course_id': 531, 'modules_indexed': 7, 'files_indexed': 2, 'chunks_total': ...}
+```
+
+### 6.4 Desactivar
+
+```env
+INDEX_INTERVAL_HOURS=0
+```
+
+Reconstruir con `docker compose up -d --build`.
+
+### 6.5 Indexación manual bajo demanda
+
+La auto-indexación no reemplaza el endpoint manual — ambos coexisten. Si el docente sube un archivo importante y no quieres esperar el próximo ciclo:
+
+```bash
+curl -X POST http://[IP-TAILSCALE]:8000/api/admin/index/[COURSE_ID] \
+  -H "x-api-token: TU_API_TOKEN"
+```
+
+### 6.6 Permisos necesarios en Moodle Web Services
+
+Para que la descarga de archivos PDF funcione, el servicio **Chatbot Service** debe tener habilitada la opción **"Can download files"**:
+
+**Admin → Site administration → Server → Web services → External services → Chatbot Service → Edit → Can download files ✓**
+
+Sin este permiso, los módulos se indexan pero los PDFs devuelven `accessexception` y no se procesan.
+
+---
+
+## PARTE 7 — Notas para producción
 
 ### Plugin roto block_smowl
 El backup de producción tiene `block_smowl` y `format_popups` registrados en la BD pero sin archivos. Desinstalarlos desde:
