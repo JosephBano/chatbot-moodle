@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Si Moodle corre en el mismo host, usar http://172.17.0.1:8080
     MOODLE_INTERNAL_URL: Optional[str] = None
 
+    # Intervalo de re-indexación automática en horas (0 = desactivado)
+    INDEX_INTERVAL_HOURS: int = 6
+
     class Config:
         env_file = ".env"
         extra = "ignore"
