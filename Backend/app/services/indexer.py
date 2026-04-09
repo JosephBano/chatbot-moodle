@@ -15,7 +15,7 @@ def _chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> list[st
         end = start + chunk_size
         chunks.append(text[start:end].strip())
         start += chunk_size - overlap
-    return [c for c in chunks if len(c) > 50]
+    return [c for c in chunks if len(c) > 20]
 
 
 def _clean_html(html: str) -> str:
@@ -121,10 +121,14 @@ async def index_course(course_id: int) -> dict:
                     continue
                 filename = content_item.get("filename", "")
                 file_url = content_item.get("fileurl", "")
+                mimetype = content_item.get("mimetype", "")
                 if not file_url:
                     continue
 
-                if filename.lower().endswith(".pdf"):
+                is_pdf = filename.lower().endswith(".pdf") or "pdf" in mimetype.lower()
+                is_txt = filename.lower().endswith(".txt") or mimetype.lower() == "text/plain"
+
+                if is_pdf:
                     file_bytes = await _download_file(file_url, settings.MOODLE_API_TOKEN)
                     if file_bytes:
                         pdf_text = _extract_pdf_text(file_bytes)
@@ -136,7 +140,7 @@ async def index_course(course_id: int) -> dict:
                                 ids.append(f"course_{course_id}_mod_{mod_id}_pdf_{i}")
                             indexed_files += 1
 
-                elif filename.lower().endswith(".txt"):
+                elif is_txt:
                     file_bytes = await _download_file(file_url, settings.MOODLE_API_TOKEN)
                     if file_bytes:
                         txt = file_bytes.decode("utf-8", errors="ignore")
