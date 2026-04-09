@@ -29,17 +29,22 @@ class block_chatbot extends block_base {
             $career = $data ? $data->data : '';
         }
 
-        // Pasar datos al widget JS — incluye course_id y career para el control de acceso
-        $this->page->requires->js_call_amd('block_chatbot/chat', 'init', [
-            get_config('block_chatbot', 'backend_url'),
-            get_config('block_chatbot', 'api_token'),
-            $role,
-            $PAGE->pagetype,
-            (int)$COURSE->id,
-            $career
-        ]);
+        // Pasar configuración al widget JS vía data attributes
+        $backend_url = get_config('block_chatbot', 'backend_url');
+        $api_token   = get_config('block_chatbot', 'api_token');
+        $course_id   = (int)$COURSE->id;
+        $page_type   = $PAGE->pagetype;
 
-        $this->content->text   = '<div id="chatbot-widget"></div>';
+        $this->page->requires->js(new moodle_url('/blocks/chatbot/chat.js'));
+
+        $this->content->text = '<div id="chatbot-widget"
+            data-backend-url="' . s($backend_url) . '"
+            data-api-token="' . s($api_token) . '"
+            data-role="' . s($role) . '"
+            data-page="' . s($page_type) . '"
+            data-course-id="' . $course_id . '"
+            data-career="' . s($career) . '"
+        ></div>';
         $this->content->footer = '';
 
         return $this->content;
