@@ -39,3 +39,4 @@ tests/
 # ── Documentación ─────────────────────────────────────
 *.md
 !README.md
+!DEPLOY.md
