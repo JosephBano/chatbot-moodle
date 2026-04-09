@@ -46,7 +46,13 @@ document.addEventListener('DOMContentLoaded', function() {
         div.style.cssText = base + (role === 'user'
             ? 'background:#0066cc;color:white;align-self:flex-end;'
             : 'background:#f0f0f0;color:#333;align-self:flex-start;');
-        div.textContent = text;
+        div.innerHTML = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
     };
@@ -65,6 +71,29 @@ document.addEventListener('DOMContentLoaded', function() {
         input.value = '';
         appendMessage('user', message);
 
+        // Indicador de escritura
+        var messages = document.getElementById('cb-messages');
+        var typing = document.createElement('div');
+        typing.id = 'cb-typing';
+        typing.style.cssText = 'padding:10px 14px;border-radius:10px;font-size:14px;max-width:85%;line-height:1.5;background:#f0f0f0;color:#333;align-self:flex-start;';
+        typing.innerHTML = '<span style="display:inline-flex;gap:4px;align-items:center;">' +
+            '<span style="width:7px;height:7px;border-radius:50%;background:#999;animation:cb-bounce 1s infinite 0s;display:inline-block;"></span>' +
+            '<span style="width:7px;height:7px;border-radius:50%;background:#999;animation:cb-bounce 1s infinite 0.2s;display:inline-block;"></span>' +
+            '<span style="width:7px;height:7px;border-radius:50%;background:#999;animation:cb-bounce 1s infinite 0.4s;display:inline-block;"></span>' +
+            '</span>';
+        if (!document.getElementById('cb-style')) {
+            var style = document.createElement('style');
+            style.id = 'cb-style';
+            style.textContent = '@keyframes cb-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}';
+            document.head.appendChild(style);
+        }
+        messages.appendChild(typing);
+        messages.scrollTop = messages.scrollHeight;
+
+        // Deshabilitar input mientras espera
+        document.getElementById('cb-input').disabled = true;
+        document.getElementById('cb-send').disabled = true;
+
         fetch(backendUrl + '/chat', {
             method: 'POST',
             headers: {
@@ -82,6 +111,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
+            var t = document.getElementById('cb-typing');
+            if (t) { t.remove(); }
             appendMessage('assistant', data.reply);
             history.push({role: 'user', content: message});
             history.push({role: 'assistant', content: data.reply});
@@ -90,7 +121,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .catch(function() {
+            var t = document.getElementById('cb-typing');
+            if (t) { t.remove(); }
             appendMessage('assistant', 'Ocurri\u00f3 un error. Por favor intenta de nuevo.');
+        })
+        .finally(function() {
+            document.getElementById('cb-input').disabled = false;
+            document.getElementById('cb-send').disabled = false;
+            document.getElementById('cb-input').focus();
         });
     };
 
