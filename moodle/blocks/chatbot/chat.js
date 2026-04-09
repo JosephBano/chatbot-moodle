@@ -4,12 +4,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    var backendUrl = widget.getAttribute('data-backend-url');
-    var apiToken   = widget.getAttribute('data-api-token');
-    var userRole   = widget.getAttribute('data-role');
+    var backendUrl  = widget.getAttribute('data-backend-url');
+    var apiToken    = widget.getAttribute('data-api-token');
+    var userRole    = widget.getAttribute('data-role');
     var currentPage = widget.getAttribute('data-page');
-    var courseId   = parseInt(widget.getAttribute('data-course-id'), 10);
-    var career     = widget.getAttribute('data-career');
+    var courseId    = parseInt(widget.getAttribute('data-course-id'), 10);
+    var career      = widget.getAttribute('data-career');
 
     // Crear el widget flotante
     var container = document.createElement('div');
@@ -36,25 +36,65 @@ document.addEventListener('DOMContentLoaded', function() {
         '</div>';
     document.body.appendChild(container);
 
-    var history = [];
+    var history  = [];
     var panelOpen = false;
+
+    // Convierte markdown básico a HTML
+    var renderMarkdown = function(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            // Headings ### ## #
+            .replace(/^#{1,3} (.+)$/gm, '<strong>$1</strong>')
+            // Negrita **texto** (sin cruzar saltos de línea)
+            .replace(/\*\*([^*\r\n]+)\*\*/g, '<strong>$1</strong>')
+            // Cursiva *texto* (sin cruzar saltos de línea)
+            .replace(/\*([^*\r\n]+)\*/g, '<em>$1</em>')
+            // Listas - item y • item
+            .replace(/^[-•]\s+(.+)$/gm, '&bull; $1')
+            // Saltos de línea
+            .replace(/\n/g, '<br>');
+    };
 
     var appendMessage = function(role, text) {
         var messages = document.getElementById('cb-messages');
         var div = document.createElement('div');
-        var base = 'padding:10px 14px;border-radius:10px;font-size:14px;max-width:85%;line-height:1.5;';
+        var base = 'padding:10px 14px;border-radius:10px;font-size:14px;max-width:85%;line-height:1.5;word-wrap:break-word;';
         div.style.cssText = base + (role === 'user'
             ? 'background:#0066cc;color:white;align-self:flex-end;'
             : 'background:#f0f0f0;color:#333;align-self:flex-start;');
-        div.innerHTML = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            .replace(/\n/g, '<br>');
+        div.innerHTML = renderMarkdown(text);
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
+    };
+
+    // Indicador de escritura animado con JS (sin CSS keyframes)
+    var typingTimer  = null;
+    var typingFrames = ['Escribiendo .', 'Escribiendo ..', 'Escribiendo ...'];
+    var typingIndex  = 0;
+
+    var showTyping = function() {
+        var messages = document.getElementById('cb-messages');
+        var div = document.createElement('div');
+        div.id = 'cb-typing';
+        div.style.cssText = 'padding:10px 14px;border-radius:10px;font-size:14px;' +
+            'max-width:85%;background:#f0f0f0;color:#888;align-self:flex-start;font-style:italic;';
+        div.textContent = typingFrames[0];
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        typingIndex = 0;
+        typingTimer = setInterval(function() {
+            typingIndex = (typingIndex + 1) % typingFrames.length;
+            var el = document.getElementById('cb-typing');
+            if (el) { el.textContent = typingFrames[typingIndex]; }
+        }, 400);
+    };
+
+    var hideTyping = function() {
+        clearInterval(typingTimer);
+        var el = document.getElementById('cb-typing');
+        if (el) { el.remove(); }
     };
 
     document.getElementById('cb-toggle').addEventListener('click', function() {
@@ -63,36 +103,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     var sendMessage = function() {
-        var input = document.getElementById('cb-input');
+        var input   = document.getElementById('cb-input');
         var message = input.value.trim();
-        if (!message) {
-            return;
-        }
+        if (!message) { return; }
         input.value = '';
+
         appendMessage('user', message);
+        showTyping();
 
-        // Indicador de escritura
-        var messages = document.getElementById('cb-messages');
-        var typing = document.createElement('div');
-        typing.id = 'cb-typing';
-        typing.style.cssText = 'padding:10px 14px;border-radius:10px;font-size:14px;max-width:85%;line-height:1.5;background:#f0f0f0;color:#333;align-self:flex-start;';
-        typing.innerHTML = '<span style="display:inline-flex;gap:4px;align-items:center;">' +
-            '<span style="width:7px;height:7px;border-radius:50%;background:#999;animation:cb-bounce 1s infinite 0s;display:inline-block;"></span>' +
-            '<span style="width:7px;height:7px;border-radius:50%;background:#999;animation:cb-bounce 1s infinite 0.2s;display:inline-block;"></span>' +
-            '<span style="width:7px;height:7px;border-radius:50%;background:#999;animation:cb-bounce 1s infinite 0.4s;display:inline-block;"></span>' +
-            '</span>';
-        if (!document.getElementById('cb-style')) {
-            var style = document.createElement('style');
-            style.id = 'cb-style';
-            style.textContent = '@keyframes cb-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}';
-            document.head.appendChild(style);
-        }
-        messages.appendChild(typing);
-        messages.scrollTop = messages.scrollHeight;
-
-        // Deshabilitar input mientras espera
         document.getElementById('cb-input').disabled = true;
-        document.getElementById('cb-send').disabled = true;
+        document.getElementById('cb-send').disabled  = true;
 
         fetch(backendUrl + '/chat', {
             method: 'POST',
@@ -101,41 +121,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-API-Token': apiToken
             },
             body: JSON.stringify({
-                message: message,
-                history: history,
+                message:   message,
+                history:   history,
                 user_role: userRole,
-                context: currentPage,
+                context:   currentPage,
                 course_id: courseId,
-                career: career
+                career:    career
             })
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            var t = document.getElementById('cb-typing');
-            if (t) { t.remove(); }
+            hideTyping();
             appendMessage('assistant', data.reply);
-            history.push({role: 'user', content: message});
+            history.push({role: 'user',      content: message});
             history.push({role: 'assistant', content: data.reply});
-            if (history.length > 20) {
-                history = history.slice(-20);
-            }
+            if (history.length > 20) { history = history.slice(-20); }
         })
         .catch(function() {
-            var t = document.getElementById('cb-typing');
-            if (t) { t.remove(); }
-            appendMessage('assistant', 'Ocurri\u00f3 un error. Por favor intenta de nuevo.');
+            hideTyping();
+            appendMessage('assistant', 'Ocurrió un error. Por favor intenta de nuevo.');
         })
         .finally(function() {
             document.getElementById('cb-input').disabled = false;
-            document.getElementById('cb-send').disabled = false;
+            document.getElementById('cb-send').disabled  = false;
             document.getElementById('cb-input').focus();
         });
     };
 
     document.getElementById('cb-send').addEventListener('click', sendMessage);
     document.getElementById('cb-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
+        if (e.key === 'Enter') { sendMessage(); }
     });
 });
