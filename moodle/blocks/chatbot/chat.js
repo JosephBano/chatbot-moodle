@@ -14,13 +14,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Crear el widget flotante
     var container = document.createElement('div');
     container.innerHTML =
-        '<div id="cb-toggle" style="position:fixed;bottom:24px;right:24px;z-index:9999;' +
+        '<div id="cb-toggle" style="position:fixed;bottom:24px;left:24px;z-index:9999;' +
         'width:56px;height:56px;border-radius:50%;background:#0066cc;' +
         'cursor:pointer;display:flex;align-items:center;justify-content:center;' +
         'box-shadow:0 4px 12px rgba(0,0,0,0.2);">' +
         '<span style="color:white;font-size:24px;">&#128172;</span>' +
         '</div>' +
-        '<div id="cb-panel" style="display:none;position:fixed;bottom:96px;right:24px;' +
+        '<div id="cb-panel" style="display:none;position:fixed;bottom:96px;left:24px;' +
         'z-index:9999;width:360px;height:480px;background:white;border-radius:12px;' +
         'box-shadow:0 8px 24px rgba(0,0,0,0.15);flex-direction:column;">' +
         '<div style="background:#0066cc;color:white;padding:16px;border-radius:12px 12px 0 0;' +
