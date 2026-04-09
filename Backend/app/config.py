@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # Moodle API (opcional — para obtener contenido del curso automáticamente)
     MOODLE_URL: Optional[str] = None
     MOODLE_API_TOKEN: Optional[str] = None
+    # URL interna para descargas de archivos desde dentro del contenedor Docker
+    # Si Moodle corre en el mismo host, usar http://172.17.0.1:8080
+    MOODLE_INTERNAL_URL: Optional[str] = None
 
     class Config:
         env_file = ".env"

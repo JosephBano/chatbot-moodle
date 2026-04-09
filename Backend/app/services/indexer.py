@@ -24,11 +24,16 @@ def _clean_html(html: str) -> str:
 
 
 async def _download_file(url: str, token: str) -> Optional[bytes]:
-    """Descarga un archivo desde Moodle usando el token."""
+    """Descarga un archivo desde Moodle usando el token.
+    Si MOODLE_INTERNAL_URL está configurado, reemplaza el host de la URL
+    para que el contenedor Docker pueda alcanzar Moodle internamente.
+    """
+    if settings.MOODLE_INTERNAL_URL and settings.MOODLE_URL:
+        url = url.replace(settings.MOODLE_URL.rstrip("/"), settings.MOODLE_INTERNAL_URL.rstrip("/"), 1)
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.get(url, params={"token": token})
-            if response.status_code == 200:
+            if response.status_code == 200 and response.content.startswith(b"%PDF"):
                 return response.content
     except Exception:
         pass
