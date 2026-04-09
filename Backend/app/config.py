@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 
 class Settings(BaseSettings):
     DEEPSEEK_API_KEY: str
@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     ALLOWED_COURSE_IDS: List[int] = []
     # Nombres de carreras habilitadas (deben coincidir con el campo career del plugin)
     ALLOWED_CAREERS: List[str] = []
+
+    # Moodle API (opcional — para obtener contenido del curso automáticamente)
+    MOODLE_URL: Optional[str] = None
+    MOODLE_API_TOKEN: Optional[str] = None
 
     class Config:
         env_file = ".env"

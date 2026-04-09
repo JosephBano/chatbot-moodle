@@ -26,6 +26,7 @@ async def chat(
         message=request.message,
         history=request.history,
         user_role=request.user_role,
-        context=request.context
+        context=request.context,
+        course_id=request.course_id
     )
     return ChatResponse(reply=reply)
