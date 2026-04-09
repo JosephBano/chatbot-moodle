@@ -196,7 +196,92 @@ Además, agregar el bloque en Moodle para cada curso nuevo:
 
 ---
 
-## PARTE 5 — Notas para producción
+## PARTE 5 — Indexación de contenidos (RAG por curso)
+
+El chatbot usa RAG (Retrieval-Augmented Generation) con ChromaDB para responder preguntas sobre el contenido específico de cada curso. Antes de que el chatbot pueda responder con información del curso, es necesario indexarlo.
+
+### 5.1 Configurar credenciales de Moodle Web Services
+
+El backend necesita conectarse a la API de Moodle para leer los contenidos. Agregar al `.env`:
+
+```env
+MOODLE_URL=http://[IP-TAILSCALE]:8080
+MOODLE_API_TOKEN=TU_TOKEN_DE_MOODLE
+```
+
+Para obtener el `MOODLE_API_TOKEN`:
+
+1. Admin → Site administration → Server → **Web services** → **Manage tokens**
+2. Crear un token para el usuario administrador y el servicio **Chatbot Service**
+3. El servicio debe tener habilitada la función `core_course_get_contents`
+
+Después de modificar el `.env`, reconstruir el contenedor:
+
+```bash
+docker compose up -d --build
+```
+
+### 5.2 Indexar un curso
+
+```bash
+curl -X POST http://[IP-TAILSCALE]:8000/api/admin/index/[COURSE_ID] \
+  -H "x-api-token: TU_API_TOKEN"
+```
+
+Respuesta esperada:
+
+```json
+{
+  "course_id": 531,
+  "modules_indexed": 5,
+  "files_indexed": 0,
+  "chunks_total": 5
+}
+```
+
+- `modules_indexed`: secciones y actividades indexadas como texto
+- `files_indexed`: PDFs y TXTs descargados e indexados
+- `chunks_total`: fragmentos totales almacenados en ChromaDB
+
+### 5.3 ¿Qué se indexa?
+
+| Tipo | Qué extrae |
+|---|---|
+| Secciones y módulos | Nombre de la sección, nombre de la actividad, tipo, descripción |
+| Archivos PDF | Texto completo extraído con pdfplumber |
+| Archivos TXT | Contenido completo en texto plano |
+
+Los fragmentos se almacenan con metadatos `{course_id, module_id, module_name, type}` para que las búsquedas RAG estén filtradas por curso.
+
+### 5.4 Re-indexar un curso
+
+Re-ejecutar el mismo comando. El endpoint elimina los chunks anteriores del curso antes de volver a indexar, por lo que es seguro ejecutarlo múltiples veces.
+
+### 5.5 Persistencia de ChromaDB
+
+Verificar que el `docker-compose.yml` del backend monte un volumen para `CHROMA_DB_PATH`:
+
+```yaml
+volumes:
+  - ./chroma_db:/app/chroma_db
+```
+
+Si no hay volumen, los datos indexados se pierden al recrear el contenedor.
+
+### 5.6 Cursos habilitados vs. indexados
+
+Son dos controles independientes:
+
+| Control | Dónde | Efecto |
+|---|---|---|
+| `ALLOWED_COURSE_IDS` en `.env` | Backend | Permite o bloquea el acceso al chat |
+| Indexación vía `/api/admin/index/` | ChromaDB | Habilita respuestas con contexto del curso |
+
+Un curso puede estar habilitado pero no indexado (el chatbot responde sin contexto RAG) o indexado pero no habilitado (el acceso es bloqueado antes de llegar al RAG). Lo correcto es tener ambos configurados.
+
+---
+
+## PARTE 6 — Notas para producción
 
 ### Plugin roto block_smowl
 El backup de producción tiene `block_smowl` y `format_popups` registrados en la BD pero sin archivos. Desinstalarlos desde:
